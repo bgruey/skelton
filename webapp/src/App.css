@@ -1,0 +1,19 @@
+
+.page {
+  margin: auto;
+  padding: 2%;
+}
+
+.menu-clicked {
+  padding: 2%;
+  background-color: rgb(249, 226, 175, 0.25);
+}
+
+.menu {
+  padding: 2%;
+}
+
+.header {
+  background-color: #009FBD;
+  padding: 3%;
+}
