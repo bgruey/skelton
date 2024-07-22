@@ -2,6 +2,9 @@ package user
 
 import (
 	"api-server/api/utils"
+	"api-server/model"
+	"api-server/pkg/sendgrid"
+	"api-server/repo"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,15 +14,20 @@ import (
 
 type UserHandler struct {
 	sync.Mutex
-	users map[string]User
+	emailClient *sgclient.SendgridClient
+	DB          *repo.PostgresClient
 }
 
 func NewUserHandler(mux *http.ServeMux) *UserHandler {
 	ret := new(UserHandler)
-	ret.users = make(map[string]User, 0)
+
+	ret.emailClient = sgclient.NewSendgridClient()
+	ret.DB = repo.New()
 
 	mux.Handle("/users", ret)
 
+	user := ret.DB.GetUserByEmail("12p49jpmasf")
+	fmt.Printf("%t: %+v\n", user.ID == 0, user)
 	return ret
 }
 
@@ -47,16 +55,15 @@ func (uh *UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (uh *UserHandler) get(w http.ResponseWriter, r *http.Request) {
 	defer uh.Unlock()
 	uh.Lock()
-	id, err := api.IdFromUrl(r)
+	uuid, err := api.UuidFromUrl("/users/", r)
 	if err != nil {
 		api.RespondWithJSON(w, http.StatusOK, nil)
 		return
 	}
-	if id >= len(uh.users) || id < 0 {
-		api.RespondWithError(w, http.StatusNotFound, "not found")
-		return
-	}
-	api.RespondWithJSON(w, http.StatusOK, nil)
+
+	user := uh.DB.GetUserByUuid(uuid)
+
+	api.RespondWithJSON(w, http.StatusOK, user)
 }
 
 func (uh *UserHandler) options(w http.ResponseWriter, r *http.Request) {
@@ -75,16 +82,35 @@ func (uh *UserHandler) post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user User
+	defer uh.Unlock()
+	uh.Lock()
+
+	var user model.User
 	err = json.Unmarshal(body, &user)
 	if err != nil {
 		api.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	defer uh.Unlock()
-	uh.Lock()
+	user.Update()
+	err = uh.DB.SaveUser(&user)
+	if err != nil {
+		api.RespondWithJSON(w, http.StatusConflict, err)
+	}
 
-	uh.users[user.Email] = user
-
+	// uh.sendWelcomeEmail(user)
 	api.RespondWithJSON(w, http.StatusCreated, user)
+}
+
+func (uh *UserHandler) sendWelcomeEmail(user model.User) error {
+	email := sgclient.Email{
+		ToName:    user.Name,
+		ToEmail:   user.Email,
+		FromName:  "Admin",
+		FromEmail: "admin@arcadetraxx.com",
+		Subject:   "Welcome!",
+		BodyText:  "Body text.",
+		BodyHTML:  "<b>HTML text.</b>",
+	}
+
+	return uh.emailClient.SendEmail(email)
 }

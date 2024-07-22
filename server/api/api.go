@@ -1,7 +1,6 @@
 package api
 
 import (
-	"api-server/api/product"
 	"api-server/api/user"
 	apiUtils "api-server/api/utils"
 	"fmt"
@@ -11,7 +10,6 @@ import (
 
 type APIHandler struct {
 	ServerMux *http.ServeMux
-	product   *product.ProductHandler
 	user      *user.UserHandler
 	port      string
 }
@@ -19,11 +17,9 @@ type APIHandler struct {
 func NewAPIHandler(port int) *APIHandler {
 	ret := new(APIHandler)
 	ret.ServerMux = http.NewServeMux()
-
 	ret.port = fmt.Sprintf(":%d", port)
 
 	// Pass server mux to register all paths for sub-handler
-	ret.product = product.NewProductHandler(ret.ServerMux)
 	ret.user = user.NewUserHandler(ret.ServerMux)
 
 	ret.ServerMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
