@@ -1,5 +1,8 @@
 services:
-  server:
+  skelton-server:
+    depends_on:
+      skelton-db:
+        condition: service_healthy
     build:
       context: ./server/
     image: skelton-server
@@ -7,14 +10,42 @@ services:
     init: true
     ports:
       - "8080:8080"
+    env_file:
+      - .env
+    networks:
+      - skelton
   
-  webapp:
+  skeplton-webapp:
+    depends_on:
+      - skelton-server
     build:
       context: ./webapp
     image: skelton-webapp
     container_name: skelton-webapp
     init: true
+    env_file:
+      - .env
     ports:
       - "3000:3000"
     volumes:
       - "./webapp:/app"
+    networks:
+      - skelton
+
+  skelton-db:
+    image: postgres
+    container_name: skelton-db
+    restart: always
+    init: true
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -d postgres -U postgres"]
+      interval: 5s
+      timeout: 60s
+      retries: 5
+      start_period: 10s 
+    networks:
+      - skelton
+networks:
+  skelton:

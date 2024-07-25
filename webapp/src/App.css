@@ -17,3 +17,14 @@
   background-color: #009FBD;
   padding: 3%;
 }
+
+th, td {
+  padding: 5px;
+}
+
+.message-row {
+  height: 25px;
+  padding: 5px;
+  text-align: center;
+  vertical-align: middle;
+}
