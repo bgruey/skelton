@@ -3,7 +3,9 @@ package repo
 import (
 	"api-server/model"
 	"api-server/pkg/psql"
+	"errors"
 	"fmt"
+	"log"
 
 	"gorm.io/gorm"
 )
@@ -28,27 +30,40 @@ func New() *PostgresClient {
 	return ret
 }
 
-func (pc *PostgresClient) GetUserByEmail(email string) (user model.User) {
+func (pc *PostgresClient) GetUserByEmail(email string) (user *model.User, err error) {
 
-	tx := pc.DB.Find(&user).Where("email = ?", email)
-	if tx.Error != nil {
-		panic(tx.Error)
+	err = pc.DB.Where("email = ?", email).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
 	}
-	return user
+	return user, nil
 }
 
-func (pc *PostgresClient) GetUserByUuid(uuid string) (user model.User) {
-	tx := pc.DB.Find(&user).Where("uuid = ?", uuid)
-	if tx.Error != nil {
-		panic(tx.Error)
+func (pc *PostgresClient) GetUserByUuid(uuid string) (user *model.User, err error) {
+
+	err = pc.DB.Where("uuid = ?", uuid).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
 	}
-	return user
+	return user, nil
 }
 
 func (pc *PostgresClient) SaveUser(user *model.User) error {
-	dbUser := pc.GetUserByEmail(user.Email)
-	if dbUser.ID != 0 {
-		panic(fmt.Errorf("user %+v already in database", user))
+	dbUser, err := pc.GetUserByEmail(user.Email)
+	if err != nil {
+		log.Printf("unknown error: %s\n", err)
+		return err
+	}
+
+	if dbUser != nil {
+		log.Printf("User with email %s found\n", user.Email)
+		return fmt.Errorf("email already used")
 	}
 
 	pc.DB.Create(user)

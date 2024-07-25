@@ -5,15 +5,15 @@ import (
 )
 
 type User struct {
-	ID          int64 `gorm:"unique;primaryKey;autoIncrement" json:"-"`
-	UUID        string
-	CreatedAt   int64 `gorm:"autoCreateTime"`
-	UpdatedAt   int64 `gorm:"autoUpdateTime:milli"`
-	ValidatedAt *int64
+	ID          int64  `gorm:"unique;primaryKey;autoIncrement" json:"-"`
+	UUID        string `gorm:"unique_index"`
+	CreatedAt   int64  `gorm:"autoCreateTime" json:"-"`
+	UpdatedAt   int64  `gorm:"autoUpdateTime:milli" json:"-"`
+	ValidatedAt *int64 `json:"-"`
 
-	Name     string `json:"name"`
-	Email    string `json:"email" gorm:"index"`
-	Password string
+	Name         string `json:"name"`
+	Email        string `json:"email" gorm:"unique_index"`
+	PasswordHash string `json:"-"`
 }
 
 func NewUser(name string, email string) *User {
@@ -22,7 +22,7 @@ func NewUser(name string, email string) *User {
 	ret.Name = name
 	ret.Email = email
 
-	ret.UUID = uuid.NewString()
+	ret.Update()
 
 	return ret
 }

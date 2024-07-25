@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sync"
 )
@@ -26,8 +27,13 @@ func NewUserHandler(mux *http.ServeMux) *UserHandler {
 
 	mux.Handle("/users", ret)
 
-	user := ret.DB.GetUserByEmail("12p49jpmasf")
-	fmt.Printf("%t: %+v\n", user.ID == 0, user)
+	user, err := ret.DB.GetUserByEmail("12p49jpmasf")
+	if user != nil {
+		log.Printf("Somehow got user: %+v\n", user)
+	}
+	if err != nil {
+		log.Printf("startup error: %s\n", err)
+	}
 	return ret
 }
 
@@ -61,7 +67,11 @@ func (uh *UserHandler) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := uh.DB.GetUserByUuid(uuid)
+	user, err := uh.DB.GetUserByUuid(uuid)
+	if err != nil {
+		log.Printf("Failed get user %s\n", err)
+		api.RespondWithError(w, http.StatusInternalServerError, "Internal error")
+	}
 
 	api.RespondWithJSON(w, http.StatusOK, user)
 }
